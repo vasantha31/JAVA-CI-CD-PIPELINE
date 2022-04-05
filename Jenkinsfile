@@ -6,15 +6,15 @@ pipeline
  agent any
  environment
  {
-     AWS_ACCOUNT_ID="930264708953"
-     AWS_DEFAULT_REGION="us-east-1" 
-     IMAGE_REPO_NAME="mavenwebapp"
+     AWS_ACCOUNT_ID="044018232007"             
+     AWS_DEFAULT_REGION="ap-south-1" 
+     IMAGE_REPO_NAME="jenkins-java"
      REPOSITORY_URI = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/${IMAGE_REPO_NAME}"
      
  }
  tools
  {
-      maven 'MAVEN_3.8.4'
+      maven 'maven3'
  }   
 
  options 
@@ -30,12 +30,9 @@ pipeline
          {
              script
              {
-                 checkout([$class: 'GitSCM', branches: [[name: '*/development']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/dev1git/maven-web-application.git']]])
+                 checkout([$class: 'GitSCM', branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/vasantha31/JAVA-CI-CD-PIPELINE.git']]])
                  COMMIT = sh (script: "git rev-parse --short=10 HEAD", returnStdout: true).trim()  
-            
-                 
-
-             }
+            }
              
          }
      }
@@ -50,7 +47,7 @@ pipeline
      {
          steps
          {
-            withSonarQubeEnv('Sonarqube-Server') 
+            withSonarQubeEnv('sonar') 
              {
                 sh "mvn sonar:sonar"
              }  
@@ -62,7 +59,7 @@ pipeline
          {
              timeout(time: 1, unit: 'HOURS') 
              {
-                waitForQualityGate abortPipeline: true, credentialsId: 'SONARQUBE-CRED'
+                waitForQualityGate abortPipeline: true
             }
          }
      }
@@ -71,10 +68,10 @@ pipeline
      {
          steps
          {
-             script
-             {
+            script
+            {
                  def readPom = readMavenPom file: 'pom.xml'
-                 def nexusrepo = readPom.version.endsWith("SNAPSHOT") ? "wallmart-snapshot" : "wallmart-release"
+                 def nexusrepo = readPom.version.endsWith("SNAPSHOT") ? "maven-snapshots" : "maven-releases"
                  nexusArtifactUploader artifacts: 
                  [
                      [
@@ -86,13 +83,13 @@ pipeline
                 ], 
                          credentialsId: 'Nexus-Cred', 
                          groupId: "${readPom.groupId}", 
-                         nexusUrl: '3.82.213.203:8081', 
+                         nexusUrl: '13.235.69.176:8081', 
                          nexusVersion: 'nexus3', 
                          protocol: 'http', 
                          repository: "${nexusrepo}", 
                          version: "${readPom.version}"
 
-             }
+            }
          }
      }
      stage('Login to AWS ECR')
@@ -126,63 +123,63 @@ pipeline
          }
 
      }
-     stage('Update image in K8s manifest file')
-     {
-         steps
-         {
+    //  stage('Update image in K8s manifest file')
+    //  {
+    //      steps
+    //      {
              
-                 sh """#!/bin/bash
-                 sed -i 's/VERSION/$COMMIT/g' deployment.yaml
-                 """
-             }
-         }
+    //              sh """#!/bin/bash
+    //              sed -i 's/VERSION/$COMMIT/g' deployment.yaml
+    //              """
+    //          }
+    //      }
      
-     stage('Deploy to K8s cluster')
-     {
-         steps
-         {
+    //  stage('Deploy to K8s cluster')
+    //  {
+    //      steps
+    //      {
              
-             sh '/usr/local/bin/kubectl apply -f deployment.yaml --record=true'
-             sh """#!/bin/bash
-             sed -i 's/$COMMIT/VERSION/g' deployment.yaml
-             """
+    //          sh '/usr/local/bin/kubectl apply -f deployment.yaml --record=true'
+    //          sh """#!/bin/bash
+    //          sed -i 's/$COMMIT/VERSION/g' deployment.yaml
+    //          """
 
-         }
-     }
+    //      }
+    //  }
  }
 
- post
- {
-     always
-     {
-         cleanWs()
-     }
-     success
-     {
-        slackSend channel: 'build-notifications',color: 'good', message: "started  JOB : ${env.JOB_NAME}  with BUILD NUMBER : ${env.BUILD_NUMBER}  BUILD_STATUS: - ${currentBuild.currentResult} To view the dashboard (<${env.BUILD_URL}|Open>)"
-        emailext attachLog: true, body: '''BUILD IS SUCCESSFULL - $PROJECT_NAME - Build # $BUILD_NUMBER - $BUILD_STATUS:
+//  post
+//  {
+//      always
+//      {
+//          cleanWs()
+//      }
+//      success
+//      {
+//         slackSend channel: 'build-notifications',color: 'good', message: "started  JOB : ${env.JOB_NAME}  with BUILD NUMBER : ${env.BUILD_NUMBER}  BUILD_STATUS: - ${currentBuild.currentResult} To view the dashboard (<${env.BUILD_URL}|Open>)"
+//         emailext attachLog: true, body: '''BUILD IS SUCCESSFULL - $PROJECT_NAME - Build # $BUILD_NUMBER - $BUILD_STATUS:
  
-        Check console output at $BUILD_URL to view the results.
+//         Check console output at $BUILD_URL to view the results.
  
-        Regards,
+//         Regards,
  
-        Nithin John George
-        ''', compressLog: true, replyTo: 'njdevops321@gmail.com', 
-        subject: '$PROJECT_NAME - $BUILD_NUMBER - $BUILD_STATUS', to: 'njdevops321@gmail.com'
-     }
-     failure
-     {
-         slackSend channel: 'build-notifications',color: 'danger', message: "started  JOB : ${env.JOB_NAME}  with BUILD NUMBER : ${env.BUILD_NUMBER}  BUILD_STATUS: - ${currentBuild.currentResult} To view the dashboard (<${env.BUILD_URL}|Open>)"
-         emailext attachLog: true, body: '''BUILD IS FAILED - $PROJECT_NAME - Build # $BUILD_NUMBER - $BUILD_STATUS:
+//         Nithin John George
+//         ''', compressLog: true, replyTo: 'njdevops321@gmail.com', 
+//         subject: '$PROJECT_NAME - $BUILD_NUMBER - $BUILD_STATUS', to: 'njdevops321@gmail.com'
+//      }
+//      failure
+//      {
+//          slackSend channel: 'build-notifications',color: 'danger', message: "started  JOB : ${env.JOB_NAME}  with BUILD NUMBER : ${env.BUILD_NUMBER}  BUILD_STATUS: - ${currentBuild.currentResult} To view the dashboard (<${env.BUILD_URL}|Open>)"
+//          emailext attachLog: true, body: '''BUILD IS FAILED - $PROJECT_NAME - Build # $BUILD_NUMBER - $BUILD_STATUS:
  
-        Check console output at $BUILD_URL to view the results.
+//         Check console output at $BUILD_URL to view the results.
  
-        Regards,
+//         Regards,
  
-        Nithin John George
-        ''', compressLog: true, replyTo: 'njdevops321@gmail.com', 
-        subject: '$PROJECT_NAME - $BUILD_NUMBER - $BUILD_STATUS', to: 'njdevops321@gmail.com'
-     }
- }
+//         Nithin John George
+//         ''', compressLog: true, replyTo: 'njdevops321@gmail.com', 
+//         subject: '$PROJECT_NAME - $BUILD_NUMBER - $BUILD_STATUS', to: 'njdevops321@gmail.com'
+//      }
+//  }
 
 }
