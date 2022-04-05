@@ -83,7 +83,7 @@ pipeline
                 ], 
                          credentialsId: 'Nexus-Cred', 
                          groupId: "${readPom.groupId}", 
-                         nexusUrl: 'http://3.110.168.246:8081', 
+                         nexusUrl: '3.110.168.246:8081', 
                          nexusVersion: 'nexus3', 
                          protocol: 'http', 
                          repository: "${nexusrepo}", 
@@ -98,7 +98,7 @@ pipeline
          {
              script
              {
-                 sh "/usr/local/bin/aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com"
+                 sh "/usr/local/bin/aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | sudo docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com"
              }
          }
      }
@@ -108,7 +108,7 @@ pipeline
          {
              script
              {
-              sh "docker build . -t ${REPOSITORY_URI}:mavenwebapp-${COMMIT}"
+              sh "sudo docker build . -t ${REPOSITORY_URI}:mavenwebapp-${COMMIT}"
              }
          }
      }
@@ -118,10 +118,18 @@ pipeline
          {
              script
              {
-                 sh "docker push ${REPOSITORY_URI}:mavenwebapp-${COMMIT}"
+                 sh "sudo docker push ${REPOSITORY_URI}:mavenwebapp-${COMMIT}"
              }
          }
 
+     }
+     stage('Docker Deploy')
+     {
+         steps{
+             script{
+                 sh "sudo docker run -rm -p 8082:8080 ${REPOSITORY_URI}:mavenwebapp-${COMMIT} "
+             }
+         }
      }
     //  stage('Update image in K8s manifest file')
     //  {
