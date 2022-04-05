@@ -167,7 +167,7 @@ pipeline
              script
              {
                  def readPom = readMavenPom file: 'pom.xml'
-                 def nexusrepo = readPom.version.endsWith("SNAPSHOT") ? "wallmart-snapshot" : "wallmart-release"
+                 def nexusrepo = readPom.version.endsWith("SNAPSHOT") ? "maven-snapshot" : "maven-release"
                  nexusArtifactUploader artifacts: 
                  [
                      [
@@ -179,7 +179,7 @@ pipeline
                 ], 
                          credentialsId: 'Nexus-Cred', 
                          groupId: "${readPom.groupId}", 
-                         nexusUrl: '3.82.213.203:8081', 
+                         nexusUrl: 'http://3.110.168.246:8081/:8081', 
                          nexusVersion: 'nexus3', 
                          protocol: 'http', 
                          repository: "${nexusrepo}", 
